@@ -11,7 +11,8 @@ using Newtonsoft.Json;
 public enum ActionChoice
 {
     INTENT_CLASSIFICATION,
-    QUESTION_ANSWERING
+    QUESTION_ANSWERING,
+    CHITCHAT
 }
 
 public class IntentClassificationPackage
@@ -28,6 +29,13 @@ public class QuestionAnswererPackage
     public string question;
 
     public string input_context;
+}
+
+public class ChitChatPackage
+{
+    public string userText;
+
+    public double timestamp;
 }
 
 public class IntentClassificationResult
@@ -47,6 +55,15 @@ public class QuestionAnswererResult
 
     public float p;
 }
+
+public class ChitChatResult
+{
+    public string userText;
+
+    public double timestamp;
+
+    public string botText;
+};
 
 public static class ReplyIntentHandler
 {
@@ -89,34 +106,30 @@ public static class ReplyIntentHandler
         return result;
     }
 
+    public static string ProcessReply(string speechTranscription, double timeStamp, ActionChoice actionChoice)
+    {
+        string jsonPackage, result = null;
+        if (actionChoice == ActionChoice.CHITCHAT)
+        {
+            ChitChatPackage chitChatPackage = new ChitChatPackage
+            {
+                userText = speechTranscription,
+                timestamp = timeStamp
+            };
+
+            jsonPackage = JsonConvert.SerializeObject(chitChatPackage);
+            result = intentClassifierCall(actionChoice, jsonPackage);
+        }
+
+        return result;
+    }
+
     private static string intentClassifierCall(ActionChoice actionChoice, string jsonPackage)
     {
         string result;
 
         if (actionChoice == ActionChoice.INTENT_CLASSIFICATION)
         {
-
-            //UnityWebRequest www = UnityWebRequest.Put(API.INTENT_CLASSIFIER_URL, jsonPackage);
-
-            //www.method = UnityWebRequest.kHttpVerbPOST;
-
-            //www.SetRequestHeader("content-type", "application/json");
-            //www.SetRequestHeader("cache-control", "no-cache");
-
-            //www.SendWebRequest();
-
-            //if (www.result == UnityWebRequest.Result.ConnectionError
-            //    || www.result == UnityWebRequest.Result.ProtocolError)
-            //{
-            //    Debug.LogError(www.error);
-            //    result = null;
-            //}
-            //else
-            //{
-            //    Debug.Log(www.downloadHandler.text);
-            //    result = www.downloadHandler.text;
-            //}
-
             var httpWebRequest = (HttpWebRequest)WebRequest.Create(API.INTENT_CLASSIFIER_URL);
             httpWebRequest.ContentType = "application/json";
             httpWebRequest.Method = "POST";
@@ -141,21 +154,6 @@ public static class ReplyIntentHandler
 
         if (actionChoice == ActionChoice.QUESTION_ANSWERING)
         {
-            //UnityWebRequest www = UnityWebRequest.Post(API.QUESTION_ANSWERER_URL, jsonPackage);
-            //www.SetRequestHeader("content-type", "application/json");
-            //www.SendWebRequest();
-
-            //if (www.result == UnityWebRequest.Result.ConnectionError
-            //    || www.result == UnityWebRequest.Result.ProtocolError)
-            //{
-            //    Debug.Log(www.error);
-            //    result = null;
-            //}
-            //else
-            //{
-            //    result = www.downloadHandler.text;
-            //}
-
             var httpWebRequest = (HttpWebRequest)WebRequest.Create(API.INTENT_CLASSIFIER_URL);
             httpWebRequest.ContentType = "application/json";
             httpWebRequest.Method = "POST";
@@ -174,6 +172,33 @@ public static class ReplyIntentHandler
             QuestionAnswererResult questionAnswererResult = JsonConvert.DeserializeObject<QuestionAnswererResult>(result);
 
             return questionAnswererResult.result;
+        }
+
+        if (actionChoice == ActionChoice.CHITCHAT)
+        {
+
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(API.CHIT_CHAT_URL);
+            httpWebRequest.ContentType = "application/json";
+            httpWebRequest.Method = "POST";
+
+            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            {
+                streamWriter.Write(jsonPackage);
+            }
+
+            var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+                result = streamReader.ReadToEnd();
+            }
+
+            Debug.Log("From chitChatCall JSON: " + result);
+
+            ChitChatResult chitChatResult = JsonUtility.FromJson<ChitChatResult>(result);
+
+            Debug.Log("From chitChatCall: " + chitChatResult.botText);
+
+            return chitChatResult.botText;
         }
 
         return null;
@@ -285,14 +310,3 @@ public static class ReplyIntentHandler
         return reply;
     }
 }
-
-
-/*
-var client = new RestClient("http://api.convai.com/zeroshot");
-var request = new RestRequest(Method.POST);
-request.AddHeader("postman-token", "a91dd4d6-ea7f-c516-40ae-a233f0fa0bdc");
-request.AddHeader("cache-control", "no-cache");
-request.AddHeader("content-type", "application/json");
-request.AddParameter("application/json", "{\r\n    \"sentence\": \"Who are you voting for in 2020\",\r\n    \"candidateLabels\": [\"politics\", \"public health\", \"economics\", \"elections\"]\r\n}", ParameterType.RequestBody);
-IRestResponse response = client.Execute(request);
- */

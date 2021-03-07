@@ -29,18 +29,19 @@ public class SpeechHandler : MonoBehaviour
 
     public string speechTranscription;
 
+    private double timeStampRNGsus;
+
     void Awake()
     {
         speechTranscription = "";
         StreamingMicRecognizeAsync(9999);
+        timeStampRNGsus = UnityEngine.Random.Range(0.0f, 10.0f);
     }
 
     // Update is called once per frame
     void Update()
     {
-
-
-        if (speechTranscription != "") // if you have something to say, say it!
+        if (speechTranscription != "" && speechTranscription != null) // if you have something to say, say it!
         {
             StartCoroutine(SpeakOutLoud(speechTranscription));
             speechTranscription = "";
@@ -67,9 +68,9 @@ public class SpeechHandler : MonoBehaviour
 
         VoiceSelectionParams voiceSelection = new VoiceSelectionParams
         {
-            Name = "en-GB-Wavenet-B",
+            Name = "en-GB-Wavenet-C",
             LanguageCode = "en-US",
-            SsmlGender = SsmlVoiceGender.Male
+            SsmlGender = SsmlVoiceGender.Female
         };
 
         AudioConfig audioConfig = new AudioConfig
@@ -98,14 +99,14 @@ public class SpeechHandler : MonoBehaviour
             filepath = "file://" + filepath;
         }
 
-
+        
         // fetching the saved file
         using (UnityWebRequest unityWebRequest = UnityWebRequestMultimedia.GetAudioClip(filepath, AudioType.WAV))
         {
             yield return unityWebRequest.SendWebRequest();
 
-            if (unityWebRequest.isNetworkError
-                || unityWebRequest.isHttpError)
+            if (unityWebRequest.result == UnityWebRequest.Result.ConnectionError
+                || unityWebRequest.result == UnityWebRequest.Result.ProtocolError)
             {
                 Debug.Log(unityWebRequest.error);
                 myClip = null;
@@ -172,7 +173,7 @@ public class SpeechHandler : MonoBehaviour
                     {
                         Debug.Log("From ASR API: " + alternative.Transcript);
 
-                        reply = ReplyIntentHandler.ProcessReplyTest(alternative.Transcript, ActionChoice.INTENT_CLASSIFICATION, candidateLabels);
+                        reply = ReplyIntentHandler.ProcessReply(alternative.Transcript, timeStampRNGsus, ActionChoice.CHITCHAT);
 
                         Debug.LogError("Reply received by ASR API: " + reply);
 
