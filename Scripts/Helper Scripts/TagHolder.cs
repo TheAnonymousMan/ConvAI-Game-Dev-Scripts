@@ -73,4 +73,5 @@ public class API
 {
     public const string INTENT_CLASSIFIER_URL = "http://api.convai.com/zeroshot";
     public const string QUESTION_ANSWERER_URL = "http://api.convai.com/qa_api";
+    public const string CHIT_CHAT_URL = "http://35.225.3.44:9000/webhook";
 }
